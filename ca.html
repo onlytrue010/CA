@@ -1,0 +1,1791 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CAFlow — Production Module Specification</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,600;1,9..144,300&family=DM+Sans:wght@300;400;500&display=swap');
+
+  :root {
+    --ink: #0f0f0f;
+    --ink2: #3a3a3a;
+    --ink3: #6b6b6b;
+    --paper: #f7f5f0;
+    --paper2: #edeae3;
+    --paper3: #e3dfd7;
+    --accent: #1a3a2a;
+    --accent2: #2d6147;
+    --accent-light: #e8f2ec;
+    --amber: #c97d2a;
+    --amber-light: #fdf3e3;
+    --red: #b83232;
+    --red-light: #fdeaea;
+    --blue: #1e4a7a;
+    --blue-light: #e8f0fa;
+    --purple: #4a2d7a;
+    --purple-light: #f0eafa;
+    --border: #d8d4cb;
+    --mono: 'DM Mono', monospace;
+    --serif: 'Fraunces', Georgia, serif;
+    --sans: 'DM Sans', sans-serif;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: var(--sans);
+    background: var(--paper);
+    color: var(--ink);
+    line-height: 1.6;
+    font-size: 14px;
+  }
+
+  /* LAYOUT */
+  .shell { display: flex; min-height: 100vh; }
+
+  /* SIDEBAR */
+  .sidebar {
+    width: 260px;
+    flex-shrink: 0;
+    background: var(--ink);
+    color: var(--paper);
+    padding: 0;
+    position: sticky;
+    top: 0;
+    height: 100vh;
+    overflow-y: auto;
+    overflow-x: hidden;
+  }
+
+  .sidebar-brand {
+    padding: 24px 20px 20px;
+    border-bottom: 1px solid rgba(255,255,255,0.08);
+  }
+
+  .sidebar-brand .logo {
+    font-family: var(--serif);
+    font-size: 20px;
+    font-weight: 600;
+    color: #fff;
+    letter-spacing: -0.5px;
+  }
+
+  .sidebar-brand .logo span {
+    color: #6dbb8a;
+  }
+
+  .sidebar-brand .tagline {
+    font-size: 10px;
+    color: rgba(255,255,255,0.35);
+    margin-top: 3px;
+    font-family: var(--mono);
+    text-transform: uppercase;
+    letter-spacing: .08em;
+  }
+
+  .nav-section {
+    padding: 16px 0 4px;
+  }
+
+  .nav-section-label {
+    font-size: 9px;
+    font-family: var(--mono);
+    text-transform: uppercase;
+    letter-spacing: .12em;
+    color: rgba(255,255,255,0.25);
+    padding: 0 20px 8px;
+  }
+
+  .nav-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 20px;
+    font-size: 12.5px;
+    color: rgba(255,255,255,0.55);
+    cursor: pointer;
+    transition: all .15s;
+    border-left: 2px solid transparent;
+  }
+
+  .nav-item:hover {
+    color: rgba(255,255,255,0.9);
+    background: rgba(255,255,255,0.04);
+  }
+
+  .nav-item.active {
+    color: #6dbb8a;
+    border-left-color: #6dbb8a;
+    background: rgba(109,187,138,0.08);
+  }
+
+  .nav-item .nav-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: currentColor;
+    flex-shrink: 0;
+    opacity: 0.6;
+  }
+
+  .nav-count {
+    margin-left: auto;
+    font-family: var(--mono);
+    font-size: 10px;
+    background: rgba(255,255,255,0.08);
+    padding: 1px 6px;
+    border-radius: 10px;
+    color: rgba(255,255,255,0.4);
+  }
+
+  /* MAIN */
+  .main {
+    flex: 1;
+    min-width: 0;
+    padding: 48px 56px;
+    max-width: 960px;
+  }
+
+  /* SECTION */
+  .section { display: none; }
+  .section.active { display: block; }
+
+  /* PAGE HEADER */
+  .page-header {
+    margin-bottom: 40px;
+    padding-bottom: 28px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .page-eyebrow {
+    font-family: var(--mono);
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: .12em;
+    color: var(--accent2);
+    margin-bottom: 8px;
+  }
+
+  .page-title {
+    font-family: var(--serif);
+    font-size: 36px;
+    font-weight: 300;
+    color: var(--ink);
+    line-height: 1.15;
+    letter-spacing: -0.5px;
+    margin-bottom: 10px;
+  }
+
+  .page-title em {
+    font-style: italic;
+    color: var(--accent2);
+  }
+
+  .page-desc {
+    font-size: 14px;
+    color: var(--ink3);
+    max-width: 580px;
+    line-height: 1.7;
+  }
+
+  /* MODULE CARD */
+  .module-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-bottom: 32px;
+  }
+
+  @media(max-width: 720px) { .module-grid { grid-template-columns: 1fr; } }
+
+  .module-card {
+    background: #fff;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 20px;
+    cursor: pointer;
+    transition: all .2s;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .module-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+    background: var(--card-accent, var(--accent2));
+    opacity: 0;
+    transition: opacity .2s;
+  }
+
+  .module-card:hover { border-color: var(--ink3); transform: translateY(-1px); }
+  .module-card:hover::before { opacity: 1; }
+  .module-card.open { border-color: var(--ink); }
+  .module-card.open::before { opacity: 1; }
+
+  .card-header {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    margin-bottom: 10px;
+  }
+
+  .card-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+    flex-shrink: 0;
+    background: var(--icon-bg, var(--accent-light));
+  }
+
+  .card-title {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--ink);
+    margin-bottom: 2px;
+  }
+
+  .card-phase {
+    font-family: var(--mono);
+    font-size: 9px;
+    text-transform: uppercase;
+    letter-spacing: .08em;
+    color: var(--ink3);
+  }
+
+  .card-desc {
+    font-size: 12px;
+    color: var(--ink3);
+    line-height: 1.55;
+    margin-bottom: 12px;
+  }
+
+  .card-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+  }
+
+  .tag {
+    font-family: var(--mono);
+    font-size: 9px;
+    padding: 2px 7px;
+    border-radius: 4px;
+    background: var(--paper2);
+    color: var(--ink3);
+    border: 1px solid var(--border);
+    text-transform: uppercase;
+    letter-spacing: .04em;
+  }
+
+  .tag.p1 { background: var(--accent-light); color: var(--accent); border-color: #b8d8c4; }
+  .tag.p2 { background: var(--amber-light); color: var(--amber); border-color: #f0d0a0; }
+  .tag.p3 { background: var(--blue-light); color: var(--blue); border-color: #b0c8e8; }
+
+  /* EXPANDED DETAIL */
+  .module-detail {
+    display: none;
+    margin-top: 12px;
+    padding-top: 14px;
+    border-top: 1px solid var(--paper3);
+  }
+
+  .module-detail.open { display: block; }
+
+  .detail-section {
+    margin-bottom: 14px;
+  }
+
+  .detail-label {
+    font-family: var(--mono);
+    font-size: 9px;
+    text-transform: uppercase;
+    letter-spacing: .1em;
+    color: var(--ink3);
+    margin-bottom: 6px;
+  }
+
+  .feature-list {
+    list-style: none;
+  }
+
+  .feature-list li {
+    font-size: 12px;
+    color: var(--ink2);
+    padding: 4px 0 4px 16px;
+    position: relative;
+    line-height: 1.5;
+    border-bottom: 1px solid var(--paper2);
+  }
+
+  .feature-list li:last-child { border-bottom: none; }
+
+  .feature-list li::before {
+    content: '→';
+    position: absolute;
+    left: 0;
+    color: var(--accent2);
+    font-size: 10px;
+  }
+
+  .db-table {
+    background: var(--ink);
+    border-radius: 8px;
+    padding: 14px 16px;
+    font-family: var(--mono);
+    font-size: 11px;
+    color: #a8d8b8;
+    line-height: 1.8;
+  }
+
+  .db-table .table-name {
+    color: #6dbb8a;
+    font-size: 12px;
+    margin-bottom: 6px;
+  }
+
+  .db-table .field { color: rgba(255,255,255,0.7); }
+  .db-table .type { color: #fab87a; }
+  .db-table .note { color: rgba(255,255,255,0.3); }
+
+  /* FULL-WIDTH MODULE */
+  .module-full {
+    background: #fff;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 24px;
+    margin-bottom: 16px;
+  }
+
+  .module-full-header {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin-bottom: 16px;
+    padding-bottom: 14px;
+    border-bottom: 1px solid var(--paper2);
+    cursor: pointer;
+  }
+
+  .module-full-title {
+    font-size: 15px;
+    font-weight: 500;
+    color: var(--ink);
+  }
+
+  .module-full-sub {
+    font-size: 12px;
+    color: var(--ink3);
+    margin-top: 1px;
+  }
+
+  .module-full-body { display: none; }
+  .module-full-body.open { display: block; }
+
+  /* ROUTE TABLE */
+  .route-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+    margin-top: 8px;
+  }
+
+  .route-table th {
+    text-align: left;
+    font-family: var(--mono);
+    font-size: 9px;
+    text-transform: uppercase;
+    letter-spacing: .08em;
+    color: var(--ink3);
+    padding: 6px 10px;
+    background: var(--paper2);
+    border: 1px solid var(--border);
+  }
+
+  .route-table td {
+    padding: 7px 10px;
+    border: 1px solid var(--paper3);
+    color: var(--ink2);
+    vertical-align: top;
+  }
+
+  .method {
+    font-family: var(--mono);
+    font-size: 10px;
+    font-weight: 500;
+    padding: 2px 6px;
+    border-radius: 3px;
+  }
+
+  .get { background: var(--accent-light); color: var(--accent); }
+  .post { background: var(--amber-light); color: var(--amber); }
+  .put { background: var(--blue-light); color: var(--blue); }
+  .del { background: var(--red-light); color: var(--red); }
+
+  /* ROLE BADGE */
+  .role {
+    font-family: var(--mono);
+    font-size: 9px;
+    padding: 2px 6px;
+    border-radius: 3px;
+    text-transform: uppercase;
+    letter-spacing: .04em;
+  }
+
+  .role-ca { background: var(--accent-light); color: var(--accent); }
+  .role-client { background: var(--amber-light); color: var(--amber); }
+  .role-admin { background: var(--purple-light); color: var(--purple); }
+  .role-system { background: var(--paper3); color: var(--ink3); }
+
+  /* SUMMARY STATS */
+  .stats-row {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+    margin-bottom: 32px;
+  }
+
+  .stat-box {
+    background: #fff;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 16px;
+    text-align: center;
+  }
+
+  .stat-num {
+    font-family: var(--serif);
+    font-size: 28px;
+    font-weight: 600;
+    color: var(--ink);
+    line-height: 1;
+    margin-bottom: 4px;
+  }
+
+  .stat-label {
+    font-size: 11px;
+    color: var(--ink3);
+  }
+
+  /* PHASE TIMELINE */
+  .timeline {
+    position: relative;
+    padding-left: 24px;
+    margin-bottom: 28px;
+  }
+
+  .timeline::before {
+    content: '';
+    position: absolute;
+    left: 6px;
+    top: 8px;
+    bottom: 8px;
+    width: 1px;
+    background: var(--border);
+  }
+
+  .timeline-item {
+    position: relative;
+    margin-bottom: 20px;
+  }
+
+  .timeline-dot {
+    position: absolute;
+    left: -21px;
+    top: 4px;
+    width: 13px;
+    height: 13px;
+    border-radius: 50%;
+    border: 2px solid #fff;
+    box-shadow: 0 0 0 1px var(--border);
+  }
+
+  .tl-p1 .timeline-dot { background: var(--accent2); box-shadow: 0 0 0 1px var(--accent2); }
+  .tl-p2 .timeline-dot { background: var(--amber); box-shadow: 0 0 0 1px var(--amber); }
+  .tl-p3 .timeline-dot { background: var(--blue); box-shadow: 0 0 0 1px var(--blue); }
+
+  .timeline-title {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--ink);
+    margin-bottom: 3px;
+  }
+
+  .timeline-body {
+    font-size: 12px;
+    color: var(--ink3);
+    line-height: 1.6;
+  }
+
+  /* CALLOUT */
+  .callout {
+    border-left: 3px solid var(--accent2);
+    background: var(--accent-light);
+    padding: 12px 16px;
+    border-radius: 0 8px 8px 0;
+    margin: 16px 0;
+    font-size: 12.5px;
+    color: var(--accent);
+    line-height: 1.6;
+  }
+
+  .callout.amber {
+    border-color: var(--amber);
+    background: var(--amber-light);
+    color: #7a4d1a;
+  }
+
+  .callout.red {
+    border-color: var(--red);
+    background: var(--red-light);
+    color: var(--red);
+  }
+
+  /* REACT COMPONENT HINT */
+  .component-hint {
+    font-family: var(--mono);
+    font-size: 11px;
+    background: var(--ink);
+    color: #a8d8b8;
+    padding: 10px 14px;
+    border-radius: 6px;
+    margin-top: 8px;
+  }
+
+  .ch-path { color: #fab87a; }
+  .ch-comp { color: #6dbb8a; }
+  .ch-note { color: rgba(255,255,255,0.3); }
+
+  h3 {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--ink);
+    margin-bottom: 10px;
+    margin-top: 20px;
+  }
+
+  h3:first-child { margin-top: 0; }
+
+  /* SCROLLBAR */
+  .sidebar::-webkit-scrollbar { width: 4px; }
+  .sidebar::-webkit-scrollbar-track { background: transparent; }
+  .sidebar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 2px; }
+</style>
+</head>
+<body>
+
+<div class="shell">
+
+  <!-- SIDEBAR NAV -->
+  <nav class="sidebar">
+    <div class="sidebar-brand">
+      <div class="logo">CA<span>Flow</span></div>
+      <div class="tagline">Module specification v1.0</div>
+    </div>
+
+    <div class="nav-section">
+      <div class="nav-section-label">Overview</div>
+      <div class="nav-item active" onclick="navigate('overview', this)">
+        <span class="nav-dot"></span> System overview
+      </div>
+      <div class="nav-item" onclick="navigate('architecture', this)">
+        <span class="nav-dot"></span> Architecture
+      </div>
+    </div>
+
+    <div class="nav-section">
+      <div class="nav-section-label">CA Portal</div>
+      <div class="nav-item" onclick="navigate('ca-auth', this)">
+        <span class="nav-dot"></span> Auth & onboarding <span class="nav-count">4</span>
+      </div>
+      <div class="nav-item" onclick="navigate('ca-clients', this)">
+        <span class="nav-dot"></span> Client management <span class="nav-count">6</span>
+      </div>
+      <div class="nav-item" onclick="navigate('ca-cases', this)">
+        <span class="nav-dot"></span> Case & task system <span class="nav-count">8</span>
+      </div>
+      <div class="nav-item" onclick="navigate('ca-documents', this)">
+        <span class="nav-dot"></span> Document engine <span class="nav-count">7</span>
+      </div>
+      <div class="nav-item" onclick="navigate('ca-deadlines', this)">
+        <span class="nav-dot"></span> Deadline & compliance <span class="nav-count">5</span>
+      </div>
+      <div class="nav-item" onclick="navigate('ca-fees', this)">
+        <span class="nav-dot"></span> Fee & billing <span class="nav-count">6</span>
+      </div>
+      <div class="nav-item" onclick="navigate('ca-comms', this)">
+        <span class="nav-dot"></span> Client communication <span class="nav-count">4</span>
+      </div>
+      <div class="nav-item" onclick="navigate('ca-team', this)">
+        <span class="nav-dot"></span> Team & workspace <span class="nav-count">4</span>
+      </div>
+    </div>
+
+    <div class="nav-section">
+      <div class="nav-section-label">Client Portal</div>
+      <div class="nav-item" onclick="navigate('cl-access', this)">
+        <span class="nav-dot"></span> Tokenised access
+      </div>
+      <div class="nav-item" onclick="navigate('cl-upload', this)">
+        <span class="nav-dot"></span> Document upload
+      </div>
+      <div class="nav-item" onclick="navigate('cl-download', this)">
+        <span class="nav-dot"></span> Download & history
+      </div>
+    </div>
+
+    <div class="nav-section">
+      <div class="nav-section-label">Admin Portal</div>
+      <div class="nav-item" onclick="navigate('ad-accounts', this)">
+        <span class="nav-dot"></span> Account management
+      </div>
+      <div class="nav-item" onclick="navigate('ad-billing', this)">
+        <span class="nav-dot"></span> Subscription & billing
+      </div>
+      <div class="nav-item" onclick="navigate('ad-system', this)">
+        <span class="nav-dot"></span> System health
+      </div>
+    </div>
+
+    <div class="nav-section">
+      <div class="nav-section-label">Data</div>
+      <div class="nav-item" onclick="navigate('db-schema', this)">
+        <span class="nav-dot"></span> DB schema
+      </div>
+      <div class="nav-item" onclick="navigate('api-routes', this)">
+        <span class="nav-dot"></span> API routes
+      </div>
+      <div class="nav-item" onclick="navigate('react-structure', this)">
+        <span class="nav-dot"></span> React file structure
+      </div>
+    </div>
+  </nav>
+
+  <!-- MAIN CONTENT -->
+  <main class="main">
+
+    <!-- OVERVIEW -->
+    <div class="section active" id="s-overview">
+      <div class="page-header">
+        <div class="page-eyebrow">Production specification</div>
+        <h1 class="page-title">CAFlow — <em>Document & Practice</em> Management</h1>
+        <p class="page-desc">A production-grade SaaS for Indian chartered accountants. Replaces the WhatsApp chaos of document collection with an organized, client-facing portal — plus practice management features that sit beyond what Tally covers.</p>
+      </div>
+
+      <div class="stats-row">
+        <div class="stat-box">
+          <div class="stat-num">3</div>
+          <div class="stat-label">User portals</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-num">18</div>
+          <div class="stat-label">Core modules</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-num">P1</div>
+          <div class="stat-label">MVP: 8 modules</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-num">~14w</div>
+          <div class="stat-label">Solo dev estimate</div>
+        </div>
+      </div>
+
+      <div class="callout">
+        <strong>What this is not:</strong> This is not an accounting tool. CAs will keep using Tally for bookkeeping and ITR software for filing. We own the workflow that happens before filing — client communication, document collection, case tracking, fee management. That is our moat.
+      </div>
+
+      <h3>Build phases</h3>
+      <div class="timeline">
+        <div class="timeline-item tl-p1">
+          <div class="timeline-dot"></div>
+          <div class="timeline-title">Phase 1 — MVP (weeks 1–10)</div>
+          <div class="timeline-body">Auth & onboarding, Client management, Case system, Document engine, Client portal (token-based upload + download). This is enough to charge ₹800/month and solve the core problem.</div>
+        </div>
+        <div class="timeline-item tl-p2">
+          <div class="timeline-dot"></div>
+          <div class="timeline-title">Phase 2 — Retention (weeks 11–20)</div>
+          <div class="timeline-body">Deadline & compliance calendar, Fee & billing module, Client communication log, Team management. These make CAs feel the product is essential — not just useful.</div>
+        </div>
+        <div class="timeline-item tl-p3">
+          <div class="timeline-dot"></div>
+          <div class="timeline-title">Phase 3 — Moat (weeks 21–30)</div>
+          <div class="timeline-body">WhatsApp notifications (outbound only), Tally export, Digital signature requests, Admin portal, Multi-firm support. This is where you defend against copycats.</div>
+        </div>
+      </div>
+
+      <div class="callout amber">
+        <strong>Solo founder rule:</strong> Do not start Phase 2 until you have 20 paying CAs using Phase 1 daily. Revenue validates direction. Building features nobody asked for is how solo SaaS projects die.
+      </div>
+    </div>
+
+    <!-- ARCHITECTURE -->
+    <div class="section" id="s-architecture">
+      <div class="page-header">
+        <div class="page-eyebrow">Technical foundation</div>
+        <h1 class="page-title">System <em>architecture</em></h1>
+        <p class="page-desc">Every layer, every service, every technology decision — with the reasoning behind it.</p>
+      </div>
+
+      <div class="module-full">
+        <div class="module-full-header" onclick="toggleFull(this)">
+          <div class="card-icon" style="--icon-bg:#e8f2ec; font-size:18px">🧱</div>
+          <div>
+            <div class="module-full-title">Frontend — React + Vite</div>
+            <div class="module-full-sub">Three apps, one codebase, shared component library</div>
+          </div>
+        </div>
+        <div class="module-full-body">
+          <div class="callout">Three separate Vite apps in a monorepo: <code>apps/ca-portal</code>, <code>apps/client-portal</code>, <code>apps/admin</code>. Shared UI components in <code>packages/ui</code>. Shared types in <code>packages/types</code>.</div>
+          <ul class="feature-list">
+            <li><strong>React 18 + Vite 5</strong> — fast HMR, ESM builds, tree-shaking</li>
+            <li><strong>React Router v6</strong> with lazy loading per route — code splitting out of the box</li>
+            <li><strong>TanStack Query v5</strong> — server state, caching, optimistic updates, background refetch</li>
+            <li><strong>Zustand</strong> — lightweight client state (auth, UI state, active workspace)</li>
+            <li><strong>React Hook Form + Zod</strong> — form validation with TypeScript-first schema</li>
+            <li><strong>TailwindCSS v3</strong> — utility classes, design tokens in tailwind.config</li>
+            <li><strong>Shadcn/ui</strong> — copy-paste components built on Radix — accessible, unstyled base</li>
+            <li><strong>Tanstack Table v8</strong> — headless data tables with sort, filter, pagination</li>
+            <li><strong>React Dropzone</strong> — drag-and-drop file upload with preview</li>
+            <li><strong>Date-fns</strong> — date manipulation, deadline calculations, IST timezone handling</li>
+          </ul>
+          <div class="component-hint" style="margin-top:12px">
+            <div><span class="ch-path">apps/</span></div>
+            <div>&nbsp;&nbsp;<span class="ch-comp">ca-portal/</span> <span class="ch-note">— main CA dashboard, team inbox, case management</span></div>
+            <div>&nbsp;&nbsp;<span class="ch-comp">client-portal/</span> <span class="ch-note">— tokenised upload/download, no login required</span></div>
+            <div>&nbsp;&nbsp;<span class="ch-comp">admin/</span> <span class="ch-note">— internal account management (Phase 2)</span></div>
+            <div><span class="ch-path">packages/</span></div>
+            <div>&nbsp;&nbsp;<span class="ch-comp">ui/</span> <span class="ch-note">— shared Shadcn components, design tokens</span></div>
+            <div>&nbsp;&nbsp;<span class="ch-comp">types/</span> <span class="ch-note">— shared TypeScript interfaces for API contracts</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="module-full">
+        <div class="module-full-header" onclick="toggleFull(this)">
+          <div class="card-icon" style="--icon-bg:#fdf3e3; font-size:18px">⚙️</div>
+          <div>
+            <div class="module-full-title">Backend — Node.js + Hono</div>
+            <div class="module-full-sub">REST API, webhook processing, background jobs</div>
+          </div>
+        </div>
+        <div class="module-full-body">
+          <ul class="feature-list">
+            <li><strong>Hono.js</strong> — ultra-fast Node.js framework, TypeScript-first, edge-ready if needed later</li>
+            <li><strong>Postgres via Supabase</strong> — managed DB, Row Level Security for multi-tenancy, realtime subscriptions</li>
+            <li><strong>Drizzle ORM</strong> — type-safe SQL queries, migrations, schema definition in TypeScript</li>
+            <li><strong>BullMQ + Redis (Upstash)</strong> — background jobs: send notifications, process file uploads, schedule reminders</li>
+            <li><strong>Cloudflare R2</strong> — S3-compatible file storage, zero egress cost, signed URLs for secure access</li>
+            <li><strong>Resend</strong> — transactional email (document received, case complete, deadline reminder)</li>
+            <li><strong>Razorpay</strong> — subscriptions, payment links, GST invoices (India-first)</li>
+            <li><strong>Clerk</strong> — auth for CA portal (email OTP, Google SSO, team management)</li>
+            <li><strong>Zod</strong> — request/response validation on every API route</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="module-full">
+        <div class="module-full-header" onclick="toggleFull(this)">
+          <div class="card-icon" style="--icon-bg:#e8f0fa; font-size:18px">🗄️</div>
+          <div>
+            <div class="module-full-title">Multi-tenancy model</div>
+            <div class="module-full-sub">How data is isolated between CA firms</div>
+          </div>
+        </div>
+        <div class="module-full-body">
+          <div class="callout">Every CA firm is a <strong>workspace</strong>. Every table has a <code>workspace_id</code> column. Supabase Row Level Security policies ensure that a query from Workspace A can never return data from Workspace B — even if a bug exists in application code.</div>
+          <ul class="feature-list">
+            <li>JWT contains <code>workspace_id</code> + <code>user_id</code> + <code>role</code></li>
+            <li>Every API route extracts workspace_id from JWT — never from query params</li>
+            <li>RLS policy on every Postgres table: <code>workspace_id = auth.jwt()->>'workspace_id'</code></li>
+            <li>File storage: every file path prefixed with <code>workspaces/{workspace_id}/</code></li>
+            <li>Client portal tokens encode workspace_id + case_id — no login, but fully scoped</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- CA AUTH -->
+    <div class="section" id="s-ca-auth">
+      <div class="page-header">
+        <div class="page-eyebrow">CA Portal — Module 1</div>
+        <h1 class="page-title">Auth & <em>firm onboarding</em></h1>
+        <p class="page-desc">How a CA registers, sets up their firm, and invites their team. First experience sets the tone for retention.</p>
+      </div>
+      <div class="module-grid">
+        <div class="module-card" style="--card-accent: var(--accent2);" onclick="toggleCard(this)">
+          <div class="card-header">
+            <div class="card-icon">🔐</div>
+            <div><div class="card-title">Registration & OTP login</div><div class="card-phase">Phase 1</div></div>
+          </div>
+          <div class="card-desc">CA signs up with mobile number. OTP via SMS. No password. Google SSO as secondary option. Account created, workspace initialised.</div>
+          <div class="card-tags"><span class="tag p1">MVP</span><span class="tag">Clerk Auth</span></div>
+          <div class="module-detail">
+            <div class="detail-section">
+              <div class="detail-label">Features</div>
+              <ul class="feature-list">
+                <li>Phone OTP signup (primary) + Google SSO (secondary)</li>
+                <li>On first login: firm setup wizard (name, city, ICAI membership number)</li>
+                <li>Workspace created with slug (used in client portal URLs)</li>
+                <li>Default service categories pre-loaded (ITR, GST, Audit, ROC, Other)</li>
+                <li>Welcome email with getting-started checklist</li>
+              </ul>
+            </div>
+            <div class="component-hint">
+              <span class="ch-path">src/pages/auth/</span><span class="ch-comp">Login.tsx</span><br>
+              <span class="ch-path">src/pages/onboarding/</span><span class="ch-comp">FirmSetup.tsx</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="module-card" style="--card-accent: var(--accent2);" onclick="toggleCard(this)">
+          <div class="card-header">
+            <div class="card-icon">🏢</div>
+            <div><div class="card-title">Firm profile & settings</div><div class="card-phase">Phase 1</div></div>
+          </div>
+          <div class="card-desc">CA configures their firm — name, address, GSTIN, letterhead logo, email signature. Used on client-facing documents and communications.</div>
+          <div class="card-tags"><span class="tag p1">MVP</span></div>
+          <div class="module-detail">
+            <div class="detail-section">
+              <div class="detail-label">Settings fields</div>
+              <ul class="feature-list">
+                <li>Firm name, address, city, state, pincode</li>
+                <li>ICAI registration number, GSTIN (for invoicing)</li>
+                <li>Logo upload (shown on client portal and fee invoices)</li>
+                <li>Primary contact phone and email</li>
+                <li>Working hours (used in deadline calculations)</li>
+                <li>Default currency (INR, locked for now)</li>
+                <li>Gujarati language toggle for client portal default</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
+        <div class="module-card" style="--card-accent: var(--accent2);" onclick="toggleCard(this)">
+          <div class="card-header">
+            <div class="card-icon">👥</div>
+            <div><div class="card-title">Team member management</div><div class="card-phase">Phase 2</div></div>
+          </div>
+          <div class="card-desc">CA invites assistants and junior staff. Role-based access: Owner, Manager, Staff. Staff can upload and view, cannot see billing or fee data.</div>
+          <div class="card-tags"><span class="tag p2">Phase 2</span><span class="tag">RBAC</span></div>
+          <div class="module-detail">
+            <div class="detail-section">
+              <div class="detail-label">Roles & permissions</div>
+              <ul class="feature-list">
+                <li>Owner — full access including billing, can delete workspace</li>
+                <li>Manager — all client and case data, cannot see billing</li>
+                <li>Staff — assigned clients only, document upload/download, no fee data</li>
+                <li>Invite via email link (expires in 48 hours)</li>
+                <li>Activity log: who uploaded, who changed case status, who sent a request</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
+        <div class="module-card" style="--card-accent: var(--accent2);" onclick="toggleCard(this)">
+          <div class="card-header">
+            <div class="card-icon">🔔</div>
+            <div><div class="card-title">Notification preferences</div><div class="card-phase">Phase 2</div></div>
+          </div>
+          <div class="card-desc">CA configures which events trigger notifications — email, in-app, or eventually WhatsApp. Per-event granularity.</div>
+          <div class="card-tags"><span class="tag p2">Phase 2</span></div>
+          <div class="module-detail">
+            <div class="detail-section">
+              <div class="detail-label">Notification events</div>
+              <ul class="feature-list">
+                <li>Client uploads a document → notify assigned staff</li>
+                <li>Document request link clicked but not submitted → reminder after X days</li>
+                <li>Case deadline approaching (7 days, 3 days, 1 day)</li>
+                <li>Fee payment received via Razorpay</li>
+                <li>New client registered via onboarding link</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- CA CLIENTS -->
+    <div class="section" id="s-ca-clients">
+      <div class="page-header">
+        <div class="page-eyebrow">CA Portal — Module 2</div>
+        <h1 class="page-title">Client <em>management</em></h1>
+        <p class="page-desc">The CRM layer. Every client, their profile, all their cases, their communication history, and their documents — in one place.</p>
+      </div>
+
+      <div class="callout">This replaces the CA's mental model of "I have a WhatsApp chat for each client." Every client becomes a structured record, not a chat thread.</div>
+
+      <div class="module-grid">
+        <div class="module-card" onclick="toggleCard(this)">
+          <div class="card-header"><div class="card-icon">📋</div><div><div class="card-title">Client list & search</div><div class="card-phase">Phase 1</div></div></div>
+          <div class="card-desc">Paginated list of all clients. Search by name, PAN, phone. Filter by status, assigned staff, service type.</div>
+          <div class="card-tags"><span class="tag p1">MVP</span></div>
+          <div class="module-detail">
+            <ul class="feature-list">
+              <li>Table view with: name, PAN, phone, active cases count, last activity date</li>
+              <li>Quick-add client button (name + phone minimum, rest later)</li>
+              <li>Import clients from CSV (bulk onboarding for existing CA practice)</li>
+              <li>Filter by: service type, assigned staff member, city, client since year</li>
+              <li>Export client list to CSV or PDF</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="module-card" onclick="toggleCard(this)">
+          <div class="card-header"><div class="card-icon">👤</div><div><div class="card-title">Client profile</div><div class="card-phase">Phase 1</div></div></div>
+          <div class="card-desc">Full client record. Personal details, tax IDs, family members linked, all cases, all documents, full communication history.</div>
+          <div class="card-tags"><span class="tag p1">MVP</span></div>
+          <div class="module-detail">
+            <ul class="feature-list">
+              <li>Personal: name, DOB, phone, email, address, preferred language</li>
+              <li>Tax IDs: PAN, Aadhaar, GSTIN (if applicable)</li>
+              <li>Business details: entity type, business name, turnover range</li>
+              <li>Family members: spouse PAN (for joint ITR), HUF details</li>
+              <li>Assigned staff member</li>
+              <li>Client since date, notes field (private to CA)</li>
+              <li>All cases, documents, and communication history in tabs</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="module-card" onclick="toggleCard(this)">
+          <div class="card-header"><div class="card-icon">🔗</div><div><div class="card-title">Client onboarding link</div><div class="card-phase">Phase 1</div></div></div>
+          <div class="card-desc">CA sends a link to new clients who fill their own profile. Clients enter their own PAN, Aadhaar, business details. CA reviews and confirms.</div>
+          <div class="card-tags"><span class="tag p1">MVP</span></div>
+          <div class="module-detail">
+            <ul class="feature-list">
+              <li>Generate onboarding link per client or a generic firm onboarding link</li>
+              <li>Client fills form in Gujarati or English on mobile</li>
+              <li>CA gets notified and reviews before confirming the record</li>
+              <li>Eliminates manual data entry for CA on new clients</li>
+              <li>Link expires after 7 days for security</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="module-card" onclick="toggleCard(this)">
+          <div class="card-header"><div class="card-icon">🏷️</div><div><div class="card-title">Tags & segments</div><div class="card-phase">Phase 2</div></div></div>
+          <div class="card-desc">Tag clients (salaried, business, HUF, NRI, senior citizen) and filter. Send bulk reminders to a tagged segment.</div>
+          <div class="card-tags"><span class="tag p2">Phase 2</span></div>
+          <div class="module-detail">
+            <ul class="feature-list">
+              <li>Custom tags per workspace, colour-coded</li>
+              <li>System auto-tags: new (added in last 30 days), inactive (no case in 1 year)</li>
+              <li>Segment-based bulk actions: send deadline reminder to all "salaried" clients</li>
+              <li>Tag visible in client list as coloured pills</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- CA CASES -->
+    <div class="section" id="s-ca-cases">
+      <div class="page-header">
+        <div class="page-eyebrow">CA Portal — Module 3</div>
+        <h1 class="page-title">Case & <em>task system</em></h1>
+        <p class="page-desc">The operational core. Every piece of work a CA does for a client is a Case. Cases have stages, tasks, deadlines, assigned staff, and a complete document checklist.</p>
+      </div>
+
+      <div class="callout amber">This is the highest-value module. If this is fast and reliable, CAs will never leave. Every other module depends on this working perfectly.</div>
+
+      <div class="module-grid">
+        <div class="module-card" onclick="toggleCard(this)">
+          <div class="card-header"><div class="card-icon">📁</div><div><div class="card-title">Case creation & templates</div><div class="card-phase">Phase 1</div></div></div>
+          <div class="card-desc">Create a case for a client. Select service type — ITR, GST, ROC, Audit. Pre-built checklist and deadline loaded automatically.</div>
+          <div class="card-tags"><span class="tag p1">MVP</span></div>
+          <div class="module-detail">
+            <ul class="feature-list">
+              <li>Case name auto-generated: "ITR FY2024-25 — Rahul Sharma"</li>
+              <li>Service types with pre-built document checklists: ITR (Form 16, bank statements, investments), GST (purchase invoices, sales invoices, GSTR-2B), ROC (board resolution, DIN, DSC)</li>
+              <li>CA can customise checklist per case — add/remove items</li>
+              <li>Deadline auto-set based on service type and financial year</li>
+              <li>Duplicate last year's case as starting point (checklist pre-filled)</li>
+              <li>Assign to team member on creation</li>
+            </ul>
+            <div class="db-table">
+              <div class="table-name">cases</div>
+              <div><span class="field">id</span> <span class="type">uuid pk</span></div>
+              <div><span class="field">workspace_id</span> <span class="type">uuid fk</span></div>
+              <div><span class="field">client_id</span> <span class="type">uuid fk</span></div>
+              <div><span class="field">service_type</span> <span class="type">enum</span></div>
+              <div><span class="field">financial_year</span> <span class="type">varchar</span></div>
+              <div><span class="field">status</span> <span class="type">enum</span> <span class="note">— pending/collecting/review/filed/complete</span></div>
+              <div><span class="field">deadline</span> <span class="type">date</span></div>
+              <div><span class="field">assigned_to</span> <span class="type">uuid fk users</span></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="module-card" onclick="toggleCard(this)">
+          <div class="card-header"><div class="card-icon">📊</div><div><div class="card-title">Case kanban board</div><div class="card-phase">Phase 1</div></div></div>
+          <div class="card-desc">Visual board showing all active cases in columns: Documents Pending → Under Review → Filed → Complete. Drag to move. See everything at once.</div>
+          <div class="card-tags"><span class="tag p1">MVP</span></div>
+          <div class="module-detail">
+            <ul class="feature-list">
+              <li>5 columns: Documents Pending / All Docs Received / Under Preparation / Filed / Complete</li>
+              <li>Each card shows: client name, service type, deadline, document completion %, assigned staff avatar</li>
+              <li>Drag and drop to change status</li>
+              <li>Red indicator if deadline within 7 days</li>
+              <li>Filter board by: staff, service type, deadline range</li>
+              <li>List view as alternative to board view</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="module-card" onclick="toggleCard(this)">
+          <div class="card-header"><div class="card-icon">✅</div><div><div class="card-title">Task management</div><div class="card-phase">Phase 1</div></div></div>
+          <div class="card-desc">Each case has tasks beyond documents — "call client about Form 16", "verify TDS mismatch", "get DSC token". Assigned, due-dated, trackable.</div>
+          <div class="card-tags"><span class="tag p1">MVP</span></div>
+          <div class="module-detail">
+            <ul class="feature-list">
+              <li>Add tasks to any case with optional due date and assignee</li>
+              <li>Task types: To-do, Call client, Internal review, Waiting on client, Waiting on govt portal</li>
+              <li>My tasks view across all cases — what is the CA/staff doing today</li>
+              <li>Overdue tasks flagged in red on dashboard</li>
+              <li>Task completion triggers case progress update</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="module-card" onclick="toggleCard(this)">
+          <div class="card-header"><div class="card-icon">📝</div><div><div class="card-title">Case notes & internal log</div><div class="card-phase">Phase 1</div></div></div>
+          <div class="card-desc">Internal notes on a case — visible only to CA team, never to client. Full chronological log of every action.</div>
+          <div class="card-tags"><span class="tag p1">MVP</span></div>
+          <div class="module-detail">
+            <ul class="feature-list">
+              <li>Rich text notes per case, timestamped, author-tagged</li>
+              <li>Auto-logged events: document received, status changed, reminder sent, fee paid</li>
+              <li>Mention a team member (@assistant) to notify them in a note</li>
+              <li>Pin important notes to the top of the case</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- CA DOCUMENTS -->
+    <div class="section" id="s-ca-documents">
+      <div class="page-header">
+        <div class="page-eyebrow">CA Portal — Module 4</div>
+        <h1 class="page-title">Document <em>engine</em></h1>
+        <p class="page-desc">The core differentiator. Organised document collection, verification, storage, and delivery — replacing the WhatsApp chaos with a structured system.</p>
+      </div>
+
+      <div class="module-grid">
+        <div class="module-card" onclick="toggleCard(this)">
+          <div class="card-header"><div class="card-icon">📨</div><div><div class="card-title">Document request sender</div><div class="card-phase">Phase 1</div></div></div>
+          <div class="card-desc">CA selects documents needed, clicks Send. Client gets a WhatsApp message (or SMS fallback) with a secure upload link. One click. Under 10 seconds.</div>
+          <div class="card-tags"><span class="tag p1">MVP</span></div>
+          <div class="module-detail">
+            <ul class="feature-list">
+              <li>Select documents from case checklist or add custom request</li>
+              <li>Message preview before sending — editable in Gujarati or Hindi</li>
+              <li>Send via: copy link (share manually), SMS, or WhatsApp (Phase 3)</li>
+              <li>Token-based secure URL: <code>caflow.app/c/[token]</code> — no login for client</li>
+              <li>Token expires in 14 days, renewable</li>
+              <li>Track: link opened, upload started, all docs submitted</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="module-card" onclick="toggleCard(this)">
+          <div class="card-header"><div class="card-icon">✔️</div><div><div class="card-title">Document verification</div><div class="card-phase">Phase 1</div></div></div>
+          <div class="card-desc">CA or assistant reviews each uploaded document. Mark as Accepted, Rejected (with reason), or Needs resubmission. Client notified automatically.</div>
+          <div class="card-tags"><span class="tag p1">MVP</span></div>
+          <div class="module-detail">
+            <ul class="feature-list">
+              <li>Document viewer inline — PDF preview, image zoom, rotate for scanned docs</li>
+              <li>Status per document: Pending / Received / Accepted / Rejected / Resubmit</li>
+              <li>Rejection reasons (short select): blurry, wrong document, wrong year, password-protected, incomplete</li>
+              <li>Custom rejection note typed and sent to client automatically</li>
+              <li>Case marked "all docs verified" only when every checklist item is Accepted</li>
+            </ul>
+            <div class="db-table">
+              <div class="table-name">case_documents</div>
+              <div><span class="field">id</span> <span class="type">uuid pk</span></div>
+              <div><span class="field">case_id</span> <span class="type">uuid fk</span></div>
+              <div><span class="field">document_type</span> <span class="type">varchar</span></div>
+              <div><span class="field">status</span> <span class="type">enum</span></div>
+              <div><span class="field">file_url</span> <span class="type">text</span> <span class="note">— R2 signed URL</span></div>
+              <div><span class="field">rejection_reason</span> <span class="type">text</span></div>
+              <div><span class="field">uploaded_by</span> <span class="type">varchar</span> <span class="note">— client or staff</span></div>
+              <div><span class="field">verified_by</span> <span class="type">uuid fk users</span></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="module-card" onclick="toggleCard(this)">
+          <div class="card-header"><div class="card-icon">📤</div><div><div class="card-title">Document delivery to client</div><div class="card-phase">Phase 1</div></div></div>
+          <div class="card-desc">CA uploads completed work — ITR acknowledgment, GST return, audit report — and sends to client securely. Client downloads from the same portal.</div>
+          <div class="card-tags"><span class="tag p1">MVP</span></div>
+          <div class="module-detail">
+            <ul class="feature-list">
+              <li>Upload completed documents tagged to a case</li>
+              <li>Generate download link for client (same portal, different section)</li>
+              <li>Document access log: who downloaded, when, from which device</li>
+              <li>Documents available to client forever (not just during active case)</li>
+              <li>Bulk download as ZIP for client</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="module-card" onclick="toggleCard(this)">
+          <div class="card-header"><div class="card-icon">🗂️</div><div><div class="card-title">Document vault (per client)</div><div class="card-phase">Phase 2</div></div></div>
+          <div class="card-desc">Every document ever submitted by a client across all cases — searchable, year-wise organised. Never lose a client's Form 16 again.</div>
+          <div class="card-tags"><span class="tag p2">Phase 2</span></div>
+          <div class="module-detail">
+            <ul class="feature-list">
+              <li>All documents across all cases indexed per client</li>
+              <li>Filter by: year, type (Form 16, bank statement, etc.), case</li>
+              <li>Full-text search by document name</li>
+              <li>Storage quota per workspace (plan-based)</li>
+              <li>Duplicate detection: same filename + same size = warn before storing</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- CA DEADLINES -->
+    <div class="section" id="s-ca-deadlines">
+      <div class="page-header">
+        <div class="page-eyebrow">CA Portal — Module 5</div>
+        <h1 class="page-title">Deadline & <em>compliance calendar</em></h1>
+        <p class="page-desc">Every statutory deadline across all clients in one view. This module alone saves CAs from the most expensive mistake they make — missing a filing deadline.</p>
+      </div>
+
+      <div class="callout">This is what makes solo CAs feel they have a co-pilot. One screen showing "8 ITR deadlines next week, 3 clients haven't submitted documents yet" is genuinely valuable in a way a chat tool never is.</div>
+
+      <div class="module-grid">
+        <div class="module-card" onclick="toggleCard(this)">
+          <div class="card-header"><div class="card-icon">📅</div><div><div class="card-title">Compliance calendar</div><div class="card-phase">Phase 2</div></div></div>
+          <div class="card-desc">Monthly/weekly calendar view of all deadlines across all clients — ITR dates, GST GSTR-3B, TDS, ROC, advance tax. Colour-coded by status.</div>
+          <div class="card-tags"><span class="tag p2">Phase 2</span></div>
+          <div class="module-detail">
+            <ul class="feature-list">
+              <li>System pre-loaded with all statutory deadlines for current FY</li>
+              <li>Per-client deadlines linked to their active cases</li>
+              <li>Status: on track (green), at risk (amber — docs not collected with 7 days left), overdue (red)</li>
+              <li>Click any deadline to see the case and what is still missing</li>
+              <li>Export monthly compliance schedule as PDF for client or internal review</li>
+              <li>GST GSTR-1/3B due dates (20th/11th of month) pre-marked for all monthly filers</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="module-card" onclick="toggleCard(this)">
+          <div class="card-header"><div class="card-icon">⏰</div><div><div class="card-title">Automated reminders</div><div class="card-phase">Phase 2</div></div></div>
+          <div class="card-desc">System automatically sends reminder to clients X days before deadline if documents are pending. CA configures when and how.</div>
+          <div class="card-tags"><span class="tag p2">Phase 2</span><span class="tag">BullMQ</span></div>
+          <div class="module-detail">
+            <ul class="feature-list">
+              <li>Reminder schedule: 14 days before, 7 days before, 3 days before (configurable)</li>
+              <li>Only sent if documents still pending — no spam when client has already submitted</li>
+              <li>Reminder channels: in-app link (always), SMS (Phase 2), WhatsApp (Phase 3)</li>
+              <li>Message template in Gujarati/English, CA can edit</li>
+              <li>CA gets notification if client has not responded after final reminder</li>
+              <li>Reminder log shows every message sent, to whom, and whether the link was opened</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="module-card" onclick="toggleCard(this)">
+          <div class="card-header"><div class="card-icon">🇮🇳</div><div><div class="card-title">Indian statutory deadline library</div><div class="card-phase">Phase 2</div></div></div>
+          <div class="card-desc">Pre-loaded database of all major Indian compliance deadlines — updated when CBDT/GSTN extend deadlines (as they frequently do).</div>
+          <div class="card-tags"><span class="tag p2">Phase 2</span></div>
+          <div class="module-detail">
+            <ul class="feature-list">
+              <li>ITR filing: July 31 (individuals), Oct 31 (audit cases), Nov 30 (TP cases)</li>
+              <li>Advance tax: June 15, Sept 15, Dec 15, March 15</li>
+              <li>GSTR-1: 11th monthly / quarterly</li>
+              <li>GSTR-3B: 20th/22nd/24th based on state category</li>
+              <li>TDS returns: quarterly (July 31, Oct 31, Jan 31, May 31)</li>
+              <li>ROC: various event-based and annual deadlines</li>
+              <li>Admin can push deadline extension updates (e.g. CBDT extends ITR to Aug 15)</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="module-card" onclick="toggleCard(this)">
+          <div class="card-header"><div class="card-icon">📊</div><div><div class="card-title">Dashboard overview widget</div><div class="card-phase">Phase 1</div></div></div>
+          <div class="card-desc">Homepage widget: cases due this week, total pending document requests, overdue cases, recently active clients. CA sees this first on every login.</div>
+          <div class="card-tags"><span class="tag p1">MVP</span></div>
+          <div class="module-detail">
+            <ul class="feature-list">
+              <li>This week: X cases due, Y documents pending from clients</li>
+              <li>Overdue: cases past deadline with red count badge</li>
+              <li>Recently active: last 5 clients who uploaded or were messaged</li>
+              <li>My tasks today: assigned tasks due today across all cases</li>
+              <li>Storage used / storage limit progress bar</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- CA FEES -->
+    <div class="section" id="s-ca-fees">
+      <div class="page-header">
+        <div class="page-eyebrow">CA Portal — Module 6</div>
+        <h1 class="page-title">Fee & <em>billing management</em></h1>
+        <p class="page-desc">Track fees per case, generate professional invoices, collect payments via Razorpay link. This is the module that closes the loop — CA finishes work, gets paid, marks complete.</p>
+      </div>
+
+      <div class="callout amber">This is what pushes our product from "document tool" to "practice management." CAs currently track fees in notebooks or Excel. Bringing this inside our platform makes us sticky.</div>
+
+      <div class="module-grid">
+        <div class="module-card" onclick="toggleCard(this)">
+          <div class="card-header"><div class="card-icon">💰</div><div><div class="card-title">Fee tracking per case</div><div class="card-phase">Phase 2</div></div></div>
+          <div class="card-desc">Attach a fee to every case. Track quoted vs billed vs received. See outstanding fees across all clients at a glance.</div>
+          <div class="card-tags"><span class="tag p2">Phase 2</span></div>
+          <div class="module-detail">
+            <ul class="feature-list">
+              <li>Fee fields per case: quoted amount, billed amount, received amount, balance</li>
+              <li>Fee status: unpaid, partial, paid</li>
+              <li>Fees summary per client: total billed, total outstanding across all cases</li>
+              <li>Workspace fee report: total billed this month, this FY, outstanding by client</li>
+              <li>Fee history is never visible to client — internal only</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="module-card" onclick="toggleCard(this)">
+          <div class="card-header"><div class="card-icon">🧾</div><div><div class="card-title">Invoice generation</div><div class="card-phase">Phase 2</div></div></div>
+          <div class="card-desc">Generate a professional PDF invoice with the CA's letterhead, GST breakdown, and service description. One click from the case page.</div>
+          <div class="card-tags"><span class="tag p2">Phase 2</span></div>
+          <div class="module-detail">
+            <ul class="feature-list">
+              <li>Invoice auto-numbered (sequential per workspace)</li>
+              <li>CA's GSTIN, firm name, address pre-filled from firm settings</li>
+              <li>Client's GSTIN, PAN auto-filled from client profile</li>
+              <li>GST: 18% GST on professional services (or exempt if under threshold)</li>
+              <li>PDF generated server-side using Puppeteer or PDFKit</li>
+              <li>Sent to client email or downloadable link</li>
+              <li>Mark invoice as paid manually or auto-confirm via Razorpay webhook</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="module-card" onclick="toggleCard(this)">
+          <div class="card-header"><div class="card-icon">📱</div><div><div class="card-title">Razorpay payment collection</div><div class="card-phase">Phase 2</div></div></div>
+          <div class="card-desc">Generate a payment link for any invoice. Client pays via UPI, card, or netbanking. Payment confirmed automatically via webhook.</div>
+          <div class="card-tags"><span class="tag p2">Phase 2</span><span class="tag">Razorpay</span></div>
+          <div class="module-detail">
+            <ul class="feature-list">
+              <li>CA connects their Razorpay account (OAuth or API key)</li>
+              <li>One-click: generate payment link for invoice amount</li>
+              <li>Client clicks link, pays via UPI (preferred in India), card, or netbanking</li>
+              <li>Razorpay webhook fires on payment success → invoice auto-marked paid → case updated</li>
+              <li>Payment receipt emailed to client automatically</li>
+              <li>CA sees all payments in a transactions view with filter by date, client, status</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="module-card" onclick="toggleCard(this)">
+          <div class="card-header"><div class="card-icon">📈</div><div><div class="card-title">Revenue reports</div><div class="card-phase">Phase 3</div></div></div>
+          <div class="card-desc">Monthly and annual revenue summary. Top clients by fee. Service-wise revenue breakdown. Useful for the CA's own accounting.</div>
+          <div class="card-tags"><span class="tag p3">Phase 3</span></div>
+          <div class="module-detail">
+            <ul class="feature-list">
+              <li>Total billed vs total received, month by month</li>
+              <li>Outstanding receivables — which clients owe and how much</li>
+              <li>Revenue by service type (ITR vs GST vs Audit)</li>
+              <li>Export to Excel for CA's own Tally entry</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- CA COMMS -->
+    <div class="section" id="s-ca-comms">
+      <div class="page-header">
+        <div class="page-eyebrow">CA Portal — Module 7</div>
+        <h1 class="page-title">Client <em>communication</em></h1>
+        <p class="page-desc">Every interaction with every client logged in one place. No more "I think I told him last Tuesday on WhatsApp."</p>
+      </div>
+
+      <div class="module-grid">
+        <div class="module-card" onclick="toggleCard(this)">
+          <div class="card-header"><div class="card-icon">💬</div><div><div class="card-title">Communication log</div><div class="card-phase">Phase 2</div></div></div>
+          <div class="card-desc">Every message sent to a client via our system logged automatically. CA can also manually log phone calls and in-person meetings.</div>
+          <div class="card-tags"><span class="tag p2">Phase 2</span></div>
+          <div class="module-detail">
+            <ul class="feature-list">
+              <li>Auto-logged: document request sent, reminder sent, invoice sent, document delivery sent</li>
+              <li>Manual log: "called client about advance tax — will submit by Friday"</li>
+              <li>Per-client communication timeline, newest first</li>
+              <li>Per-case filtered view — show only communications for this case</li>
+              <li>Exportable for client dispute resolution or internal audit</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="module-card" onclick="toggleCard(this)">
+          <div class="card-header"><div class="card-icon">✉️</div><div><div class="card-title">Bulk message sender</div><div class="card-phase">Phase 2</div></div></div>
+          <div class="card-desc">Send a message to a group of clients — all ITR clients, all GST clients, all clients with outstanding fees. With merge tags for personalisation.</div>
+          <div class="card-tags"><span class="tag p2">Phase 2</span></div>
+          <div class="module-detail">
+            <ul class="feature-list">
+              <li>Recipient filter: by tag, by service type, by case status, by city</li>
+              <li>Message template with merge tags: {{client_name}}, {{deadline_date}}, {{outstanding_amount}}</li>
+              <li>Preview before send with real data substituted</li>
+              <li>Delivery: email (via Resend), SMS (via Fast2SMS), WhatsApp (Phase 3)</li>
+              <li>Each send logged in communication log per client</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- CA TEAM -->
+    <div class="section" id="s-ca-team">
+      <div class="page-header">
+        <div class="page-eyebrow">CA Portal — Module 8</div>
+        <h1 class="page-title">Team & <em>workspace</em></h1>
+        <p class="page-desc">For CAs who have assistants, junior staff, or article students. Everyone in one workspace, each person sees only what they should.</p>
+      </div>
+      <div class="callout">Most solo CAs have at least one assistant by the time they have 50+ clients. This module is why they upgrade from Starter to Growth plan.</div>
+      <div class="module-grid">
+        <div class="module-card" onclick="toggleCard(this)">
+          <div class="card-header"><div class="card-icon">👤</div><div><div class="card-title">Staff accounts & roles</div><div class="card-phase">Phase 2</div></div></div>
+          <div class="card-desc">Invite staff by email. Assign role. Staff logs in, sees only their assigned clients and cases. CA sees everything.</div>
+          <div class="card-tags"><span class="tag p2">Phase 2</span></div>
+          <div class="module-detail">
+            <ul class="feature-list">
+              <li>3 roles: Owner (CA), Manager (senior staff), Staff (assistant/article)</li>
+              <li>Staff see: their assigned cases, their assigned tasks, shared document inbox</li>
+              <li>Staff cannot see: fee data, billing, other staff's assignments, firm settings</li>
+              <li>Activity log: timestamped record of every action per user</li>
+              <li>Remove staff — their assigned cases auto-reassigned to Owner</li>
+            </ul>
+          </div>
+        </div>
+        <div class="module-card" onclick="toggleCard(this)">
+          <div class="card-header"><div class="card-icon">📋</div><div><div class="card-title">Shared task board</div><div class="card-phase">Phase 2</div></div></div>
+          <div class="card-desc">All tasks across all cases and all staff in one board. Owner sees who is doing what. Prevents things from falling through cracks.</div>
+          <div class="card-tags"><span class="tag p2">Phase 2</span></div>
+          <div class="module-detail">
+            <ul class="feature-list">
+              <li>Board filtered by: assigned to me, assigned to team, all</li>
+              <li>Overdue tasks highlighted — owner can see if staff is falling behind</li>
+              <li>Reassign task from one staff member to another</li>
+              <li>Daily digest email to owner: tasks completed yesterday, overdue today</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- CLIENT ACCESS -->
+    <div class="section" id="s-cl-access">
+      <div class="page-header">
+        <div class="page-eyebrow">Client Portal — Module 1</div>
+        <h1 class="page-title">Tokenised <em>access system</em></h1>
+        <p class="page-desc">The client never creates an account. They receive a link, tap it, and they are in their own secure space. No friction, works for all age groups.</p>
+      </div>
+      <div class="callout">This is the design decision that makes the product work for Tier 2 and Tier 3 India. No login = no abandonment at the auth screen.</div>
+      <div class="module-full">
+        <div class="module-full-header" onclick="toggleFull(this)">
+          <div class="card-icon" style="--icon-bg:#e8f2ec">🔑</div>
+          <div>
+            <div class="module-full-title">How tokens work</div>
+            <div class="module-full-sub">Security without friction</div>
+          </div>
+        </div>
+        <div class="module-full-body">
+          <ul class="feature-list">
+            <li>Token generated on server: <code>crypto.randomBytes(32).toString('hex')</code></li>
+            <li>Stored in DB: token → workspace_id + client_id + case_id + expiry</li>
+            <li>URL: <code>caflow.app/c/[token]</code> — this IS the authentication</li>
+            <li>Token expires: 14 days for document requests, 30 days for download links, never for client vault access (if client logs in with OTP)</li>
+            <li>Token is single-use for sensitive operations (e.g. onboarding form), multi-use for document upload</li>
+            <li>If token expired: show "This link has expired. Please contact your CA." with CA's phone number</li>
+            <li>For returning clients who prefer login: optional phone OTP login to see all their cases across time</li>
+          </ul>
+          <div class="db-table" style="margin-top:12px">
+            <div class="table-name">client_tokens</div>
+            <div><span class="field">token</span> <span class="type">varchar(64) pk</span></div>
+            <div><span class="field">workspace_id</span> <span class="type">uuid</span></div>
+            <div><span class="field">client_id</span> <span class="type">uuid</span></div>
+            <div><span class="field">case_id</span> <span class="type">uuid nullable</span></div>
+            <div><span class="field">purpose</span> <span class="type">enum</span> <span class="note">— upload/download/onboarding</span></div>
+            <div><span class="field">expires_at</span> <span class="type">timestamptz</span></div>
+            <div><span class="field">used_count</span> <span class="type">int default 0</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- CLIENT UPLOAD -->
+    <div class="section" id="s-cl-upload">
+      <div class="page-header">
+        <div class="page-eyebrow">Client Portal — Module 2</div>
+        <h1 class="page-title">Document <em>upload experience</em></h1>
+        <p class="page-desc">The screen a 55-year-old client sees on their phone. It must work perfectly in one tap, in Gujarati, on a slow 4G connection.</p>
+      </div>
+      <div class="module-full">
+        <div class="module-full-header" onclick="toggleFull(this)">
+          <div class="card-icon" style="--icon-bg:#fdf3e3">📲</div>
+          <div>
+            <div class="module-full-title">Mobile-first upload UI</div>
+            <div class="module-full-sub">Full spec for the most critical user-facing screen</div>
+          </div>
+        </div>
+        <div class="module-full-body">
+          <ul class="feature-list">
+            <li>Language switcher at top: Gujarati | English (persisted in localStorage)</li>
+            <li>Header: CA firm name + logo, client name in greeting</li>
+            <li>Each required document shown as a card with large tap target</li>
+            <li>Card states: ⬜ Not uploaded / 🔄 Uploading / ✅ Received / ❌ Rejected — resubmit</li>
+            <li>Tap upload button → native file picker opens (camera + gallery + files)</li>
+            <li>Multiple files per document type allowed (e.g. 3 months bank statements)</li>
+            <li>Upload progress bar per file — critical for slow connections</li>
+            <li>No file size limit shown to user — we compress images server-side if over 10MB</li>
+            <li>After all uploaded: "Dhanyavaad! Tamara documents CA ne maldi gaya. ✅" (Gujarati)</li>
+            <li>CA contact info shown at bottom if client has questions</li>
+            <li>Works fully offline for upload queue — if connection drops mid-upload, resumes</li>
+          </ul>
+          <div class="component-hint" style="margin-top:12px">
+            <span class="ch-path">apps/client-portal/src/pages/</span><span class="ch-comp">Upload.tsx</span><br>
+            <span class="ch-path">apps/client-portal/src/i18n/</span><span class="ch-comp">gu.json</span> <span class="ch-note">— Gujarati translations</span><br>
+            <span class="ch-path">apps/client-portal/src/i18n/</span><span class="ch-comp">en.json</span> <span class="ch-note">— English translations</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- CLIENT DOWNLOAD -->
+    <div class="section" id="s-cl-download">
+      <div class="page-header">
+        <div class="page-eyebrow">Client Portal — Module 3</div>
+        <h1 class="page-title">Download & <em>document history</em></h1>
+        <p class="page-desc">Client receives their completed documents — ITR acknowledgment, GST returns — and can access past years' documents anytime.</p>
+      </div>
+      <div class="module-full">
+        <div class="module-full-header" onclick="toggleFull(this)">
+          <div class="card-icon" style="--icon-bg:#e8f0fa">📥</div>
+          <div>
+            <div class="module-full-title">Client download experience</div>
+            <div class="module-full-sub">Simple, permanent access to all their documents</div>
+          </div>
+        </div>
+        <div class="module-full-body">
+          <ul class="feature-list">
+            <li>Token-based access for one-time download link (no login needed)</li>
+            <li>Optional: phone OTP login to see all years' documents in one place</li>
+            <li>Documents listed with: name, date filed, download button</li>
+            <li>Tap download → file downloads directly to phone</li>
+            <li>Gujarati labels: "ITR Acknowledgment — FY 2024-25 — Download Karo"</li>
+            <li>Client can share documents from here directly (WhatsApp share button on mobile)</li>
+            <li>Access log on CA side: who downloaded what and when</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- ADMIN -->
+    <div class="section" id="s-ad-accounts">
+      <div class="page-header">
+        <div class="page-eyebrow">Admin Portal — Module 1</div>
+        <h1 class="page-title">Account <em>management</em></h1>
+        <p class="page-desc">Internal tool for you (the founder) to manage all CA accounts. Build this only after 20+ paying customers.</p>
+      </div>
+      <div class="callout red">Do not build this before Phase 2. For your first 20 customers, manage everything manually via Supabase dashboard and direct DB queries.</div>
+      <div class="module-grid">
+        <div class="module-card" onclick="toggleCard(this)">
+          <div class="card-header"><div class="card-icon">🏢</div><div><div class="card-title">Workspace list & management</div><div class="card-phase">Phase 3</div></div></div>
+          <div class="card-desc">See all CA firms using the platform. Subscription status, usage metrics, last login, storage used.</div>
+          <div class="card-tags"><span class="tag p3">Phase 3</span></div>
+          <div class="module-detail">
+            <ul class="feature-list">
+              <li>Table: workspace name, plan, MRR, clients count, cases count, last active</li>
+              <li>Impersonate any workspace for support (with audit log)</li>
+              <li>Manually upgrade/downgrade plan</li>
+              <li>Disable workspace (for payment failure, abuse)</li>
+              <li>Send in-app announcement to all workspaces or specific plan tier</li>
+            </ul>
+          </div>
+        </div>
+        <div class="module-card" onclick="toggleCard(this)">
+          <div class="card-header"><div class="card-icon">📊</div><div><div class="card-title">Platform analytics</div><div class="card-phase">Phase 3</div></div></div>
+          <div class="card-desc">MRR, churn, activation rate, feature usage. Which features are being used. Where users drop off in onboarding.</div>
+          <div class="card-tags"><span class="tag p3">Phase 3</span></div>
+          <div class="module-detail">
+            <ul class="feature-list">
+              <li>MRR chart, new signups per week, churn count</li>
+              <li>Activation funnel: signed up → first client added → first case created → first document request sent</li>
+              <li>Feature usage heatmap — which modules are most/least used</li>
+              <li>Support ticket volume vs feature usage correlation</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- BILLING ADMIN -->
+    <div class="section" id="s-ad-billing">
+      <div class="page-header">
+        <div class="page-eyebrow">Admin Portal — Module 2</div>
+        <h1 class="page-title">Subscription <em>& billing</em></h1>
+      </div>
+      <div class="module-full">
+        <div class="module-full-header" onclick="toggleFull(this)">
+          <div class="card-icon" style="--icon-bg:#e8f2ec">💳</div>
+          <div>
+            <div class="module-full-title">Our pricing model & plans</div>
+            <div class="module-full-sub">What CAs pay us</div>
+          </div>
+        </div>
+        <div class="module-full-body">
+          <ul class="feature-list">
+            <li><strong>Starter ₹799/month</strong> — 1 user, up to 50 clients, 5GB storage, document collection, client portal, basic case management</li>
+            <li><strong>Growth ₹1,999/month</strong> — 5 users, up to 200 clients, 20GB storage, all Phase 2 features, fee management, compliance calendar</li>
+            <li><strong>Pro ₹4,499/month</strong> — unlimited users, unlimited clients, 100GB storage, all features, priority support, Tally export</li>
+            <li>Annual billing at 20% discount — strongly promote this for cash flow</li>
+            <li>Razorpay Subscriptions for auto-renewal</li>
+            <li>14-day free trial, no card required — convert on value</li>
+            <li>Failed payment: 3 retry attempts over 5 days, then downgrade to read-only</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- SYSTEM HEALTH -->
+    <div class="section" id="s-ad-system">
+      <div class="page-header">
+        <div class="page-eyebrow">Admin Portal — Module 3</div>
+        <h1 class="page-title">System <em>health</em></h1>
+      </div>
+      <div class="callout">Use Sentry for error tracking, Uptime Robot for uptime monitoring, and Supabase dashboard for DB health. You do not need to build any of this — use existing tools and just embed their status pages.</div>
+    </div>
+
+    <!-- DB SCHEMA -->
+    <div class="section" id="s-db-schema">
+      <div class="page-header">
+        <div class="page-eyebrow">Data layer</div>
+        <h1 class="page-title">Core <em>DB schema</em></h1>
+        <p class="page-desc">Every table, its key columns, and relationships. Written for Postgres with Drizzle ORM.</p>
+      </div>
+      <div class="module-full">
+        <div class="module-full-header" onclick="toggleFull(this)">
+          <div class="card-icon" style="--icon-bg:#e8f0fa">🗄️</div>
+          <div><div class="module-full-title">All tables</div><div class="module-full-sub">Click to expand</div></div>
+        </div>
+        <div class="module-full-body">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+            <div class="db-table">
+              <div class="table-name">workspaces</div>
+              <div><span class="field">id</span> <span class="type">uuid pk</span></div>
+              <div><span class="field">name</span> <span class="type">varchar</span></div>
+              <div><span class="field">slug</span> <span class="type">varchar unique</span></div>
+              <div><span class="field">plan</span> <span class="type">enum</span></div>
+              <div><span class="field">icai_number</span> <span class="type">varchar</span></div>
+              <div><span class="field">gstin</span> <span class="type">varchar</span></div>
+              <div><span class="field">city</span> <span class="type">varchar</span></div>
+              <div><span class="field">logo_url</span> <span class="type">text</span></div>
+              <div><span class="field">created_at</span> <span class="type">timestamptz</span></div>
+            </div>
+            <div class="db-table">
+              <div class="table-name">users</div>
+              <div><span class="field">id</span> <span class="type">uuid pk</span></div>
+              <div><span class="field">workspace_id</span> <span class="type">uuid fk</span></div>
+              <div><span class="field">clerk_id</span> <span class="type">varchar</span></div>
+              <div><span class="field">name</span> <span class="type">varchar</span></div>
+              <div><span class="field">phone</span> <span class="type">varchar</span></div>
+              <div><span class="field">role</span> <span class="type">enum</span> <span class="note">owner/manager/staff</span></div>
+              <div><span class="field">is_active</span> <span class="type">boolean</span></div>
+            </div>
+            <div class="db-table">
+              <div class="table-name">clients</div>
+              <div><span class="field">id</span> <span class="type">uuid pk</span></div>
+              <div><span class="field">workspace_id</span> <span class="type">uuid fk</span></div>
+              <div><span class="field">name</span> <span class="type">varchar</span></div>
+              <div><span class="field">phone</span> <span class="type">varchar</span></div>
+              <div><span class="field">email</span> <span class="type">varchar nullable</span></div>
+              <div><span class="field">pan</span> <span class="type">varchar</span></div>
+              <div><span class="field">aadhaar_last4</span> <span class="type">varchar</span></div>
+              <div><span class="field">gstin</span> <span class="type">varchar nullable</span></div>
+              <div><span class="field">preferred_lang</span> <span class="type">enum</span> <span class="note">gu/en/hi</span></div>
+              <div><span class="field">assigned_to</span> <span class="type">uuid fk users</span></div>
+              <div><span class="field">tags</span> <span class="type">text[]</span></div>
+            </div>
+            <div class="db-table">
+              <div class="table-name">cases</div>
+              <div><span class="field">id</span> <span class="type">uuid pk</span></div>
+              <div><span class="field">workspace_id</span> <span class="type">uuid fk</span></div>
+              <div><span class="field">client_id</span> <span class="type">uuid fk</span></div>
+              <div><span class="field">title</span> <span class="type">varchar</span></div>
+              <div><span class="field">service_type</span> <span class="type">enum</span></div>
+              <div><span class="field">financial_year</span> <span class="type">varchar</span></div>
+              <div><span class="field">status</span> <span class="type">enum</span></div>
+              <div><span class="field">deadline</span> <span class="type">date</span></div>
+              <div><span class="field">assigned_to</span> <span class="type">uuid fk users</span></div>
+              <div><span class="field">fee_quoted</span> <span class="type">numeric</span></div>
+              <div><span class="field">fee_received</span> <span class="type">numeric</span></div>
+            </div>
+            <div class="db-table">
+              <div class="table-name">case_documents</div>
+              <div><span class="field">id</span> <span class="type">uuid pk</span></div>
+              <div><span class="field">case_id</span> <span class="type">uuid fk</span></div>
+              <div><span class="field">workspace_id</span> <span class="type">uuid fk</span></div>
+              <div><span class="field">label</span> <span class="type">varchar</span> <span class="note">Form 16, etc</span></div>
+              <div><span class="field">status</span> <span class="type">enum</span></div>
+              <div><span class="field">direction</span> <span class="type">enum</span> <span class="note">inbound/outbound</span></div>
+              <div><span class="field">file_key</span> <span class="type">text</span> <span class="note">R2 storage key</span></div>
+              <div><span class="field">file_size</span> <span class="type">int</span></div>
+              <div><span class="field">rejection_reason</span> <span class="type">text</span></div>
+              <div><span class="field">uploaded_at</span> <span class="type">timestamptz</span></div>
+            </div>
+            <div class="db-table">
+              <div class="table-name">tasks</div>
+              <div><span class="field">id</span> <span class="type">uuid pk</span></div>
+              <div><span class="field">case_id</span> <span class="type">uuid fk</span></div>
+              <div><span class="field">workspace_id</span> <span class="type">uuid fk</span></div>
+              <div><span class="field">title</span> <span class="type">varchar</span></div>
+              <div><span class="field">assigned_to</span> <span class="type">uuid fk users</span></div>
+              <div><span class="field">due_date</span> <span class="type">date nullable</span></div>
+              <div><span class="field">status</span> <span class="type">enum</span> <span class="note">todo/done</span></div>
+            </div>
+            <div class="db-table">
+              <div class="table-name">invoices</div>
+              <div><span class="field">id</span> <span class="type">uuid pk</span></div>
+              <div><span class="field">workspace_id</span> <span class="type">uuid fk</span></div>
+              <div><span class="field">case_id</span> <span class="type">uuid fk</span></div>
+              <div><span class="field">client_id</span> <span class="type">uuid fk</span></div>
+              <div><span class="field">invoice_number</span> <span class="type">varchar</span></div>
+              <div><span class="field">amount</span> <span class="type">numeric</span></div>
+              <div><span class="field">gst_amount</span> <span class="type">numeric</span></div>
+              <div><span class="field">status</span> <span class="type">enum</span> <span class="note">draft/sent/paid</span></div>
+              <div><span class="field">razorpay_link</span> <span class="type">text</span></div>
+              <div><span class="field">paid_at</span> <span class="type">timestamptz</span></div>
+            </div>
+            <div class="db-table">
+              <div class="table-name">client_tokens</div>
+              <div><span class="field">token</span> <span class="type">varchar(64) pk</span></div>
+              <div><span class="field">workspace_id</span> <span class="type">uuid</span></div>
+              <div><span class="field">client_id</span> <span class="type">uuid</span></div>
+              <div><span class="field">case_id</span> <span class="type">uuid nullable</span></div>
+              <div><span class="field">purpose</span> <span class="type">enum</span></div>
+              <div><span class="field">expires_at</span> <span class="type">timestamptz</span></div>
+              <div><span class="field">used_count</span> <span class="type">int</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- API ROUTES -->
+    <div class="section" id="s-api-routes">
+      <div class="page-header">
+        <div class="page-eyebrow">Data layer</div>
+        <h1 class="page-title">Core <em>API routes</em></h1>
+        <p class="page-desc">Every route the CA portal and client portal will call. REST API built with Hono.js.</p>
+      </div>
+      <table class="route-table">
+        <thead><tr><th>Method</th><th>Route</th><th>Who calls it</th><th>What it does</th></tr></thead>
+        <tbody>
+          <tr><td><span class="method post">POST</span></td><td><code>/api/workspaces</code></td><td><span class="role role-ca">CA</span></td><td>Create new workspace on signup</td></tr>
+          <tr><td><span class="method get">GET</span></td><td><code>/api/clients</code></td><td><span class="role role-ca">CA</span></td><td>List all clients (paginated, filterable)</td></tr>
+          <tr><td><span class="method post">POST</span></td><td><code>/api/clients</code></td><td><span class="role role-ca">CA</span></td><td>Create new client record</td></tr>
+          <tr><td><span class="method get">GET</span></td><td><code>/api/clients/:id</code></td><td><span class="role role-ca">CA</span></td><td>Full client profile with cases + docs</td></tr>
+          <tr><td><span class="method put">PUT</span></td><td><code>/api/clients/:id</code></td><td><span class="role role-ca">CA</span></td><td>Update client details</td></tr>
+          <tr><td><span class="method get">GET</span></td><td><code>/api/cases</code></td><td><span class="role role-ca">CA</span></td><td>All cases (kanban data, filterable)</td></tr>
+          <tr><td><span class="method post">POST</span></td><td><code>/api/cases</code></td><td><span class="role role-ca">CA</span></td><td>Create case with checklist</td></tr>
+          <tr><td><span class="method put">PUT</span></td><td><code>/api/cases/:id/status</code></td><td><span class="role role-ca">CA</span></td><td>Move case to new status</td></tr>
+          <tr><td><span class="method post">POST</span></td><td><code>/api/cases/:id/request</code></td><td><span class="role role-ca">CA</span></td><td>Generate token + send document request</td></tr>
+          <tr><td><span class="method post">POST</span></td><td><code>/api/documents/upload-url</code></td><td><span class="role role-ca">CA</span> <span class="role role-client">Client</span></td><td>Get presigned R2 URL for direct upload</td></tr>
+          <tr><td><span class="method put">PUT</span></td><td><code>/api/documents/:id/verify</code></td><td><span class="role role-ca">CA</span></td><td>Accept or reject a document</td></tr>
+          <tr><td><span class="method get">GET</span></td><td><code>/api/documents/:id/download</code></td><td><span class="role role-ca">CA</span> <span class="role role-client">Client</span></td><td>Get signed download URL from R2</td></tr>
+          <tr><td><span class="method get">GET</span></td><td><code>/api/portal/:token</code></td><td><span class="role role-client">Client</span></td><td>Validate token, return case + checklist</td></tr>
+          <tr><td><span class="method post">POST</span></td><td><code>/api/portal/:token/upload</code></td><td><span class="role role-client">Client</span></td><td>Client uploads document against checklist item</td></tr>
+          <tr><td><span class="method post">POST</span></td><td><code>/api/invoices</code></td><td><span class="role role-ca">CA</span></td><td>Create invoice for a case</td></tr>
+          <tr><td><span class="method post">POST</span></td><td><code>/api/invoices/:id/payment-link</code></td><td><span class="role role-ca">CA</span></td><td>Generate Razorpay payment link</td></tr>
+          <tr><td><span class="method post">POST</span></td><td><code>/api/webhooks/razorpay</code></td><td><span class="role role-system">System</span></td><td>Payment confirmed — mark invoice paid</td></tr>
+          <tr><td><span class="method post">POST</span></td><td><code>/api/tasks</code></td><td><span class="role role-ca">CA</span></td><td>Create task on a case</td></tr>
+          <tr><td><span class="method put">PUT</span></td><td><code>/api/tasks/:id</code></td><td><span class="role role-ca">CA</span></td><td>Update task status or assignment</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- REACT STRUCTURE -->
+    <div class="section" id="s-react-structure">
+      <div class="page-header">
+        <div class="page-eyebrow">Data layer</div>
+        <h1 class="page-title">React + Vite <em>file structure</em></h1>
+        <p class="page-desc">Exact folder structure for the monorepo. Use this as your starting point.</p>
+      </div>
+      <div class="db-table" style="line-height:1.9;font-size:12px">
+        <div style="color:#6dbb8a">caflow/ (monorepo root)</div>
+        <div style="color:rgba(255,255,255,0.4)">├── package.json (workspaces: ["apps/*", "packages/*"])</div>
+        <div style="color:#fab87a">├── apps/</div>
+        <div style="color:rgba(255,255,255,0.7)">│   ├── ca-portal/ (Vite + React)</div>
+        <div style="color:rgba(255,255,255,0.4)">│   │   ├── src/</div>
+        <div style="color:rgba(255,255,255,0.4)">│   │   │   ├── pages/</div>
+        <div style="color:rgba(255,255,255,0.3)">│   │   │   │   ├── dashboard/Dashboard.tsx</div>
+        <div style="color:rgba(255,255,255,0.3)">│   │   │   │   ├── clients/ (List.tsx, Profile.tsx, Add.tsx)</div>
+        <div style="color:rgba(255,255,255,0.3)">│   │   │   │   ├── cases/ (Board.tsx, CaseDetail.tsx)</div>
+        <div style="color:rgba(255,255,255,0.3)">│   │   │   │   ├── documents/ (Inbox.tsx, Verify.tsx)</div>
+        <div style="color:rgba(255,255,255,0.3)">│   │   │   │   ├── fees/ (Invoices.tsx, Payments.tsx)</div>
+        <div style="color:rgba(255,255,255,0.3)">│   │   │   │   ├── calendar/ (Compliance.tsx)</div>
+        <div style="color:rgba(255,255,255,0.3)">│   │   │   │   ├── team/ (Members.tsx)</div>
+        <div style="color:rgba(255,255,255,0.3)">│   │   │   │   └── settings/ (Firm.tsx, Notifications.tsx)</div>
+        <div style="color:rgba(255,255,255,0.4)">│   │   │   ├── components/</div>
+        <div style="color:rgba(255,255,255,0.3)">│   │   │   │   ├── layout/ (Sidebar.tsx, Header.tsx)</div>
+        <div style="color:rgba(255,255,255,0.3)">│   │   │   │   ├── cases/ (KanbanCard.tsx, CaseForm.tsx)</div>
+        <div style="color:rgba(255,255,255,0.3)">│   │   │   │   ├── documents/ (DocCard.tsx, Uploader.tsx)</div>
+        <div style="color:rgba(255,255,255,0.3)">│   │   │   │   └── shared/ (StatusBadge.tsx, EmptyState.tsx)</div>
+        <div style="color:rgba(255,255,255,0.4)">│   │   │   ├── hooks/ (useClients, useCases, useDocuments)</div>
+        <div style="color:rgba(255,255,255,0.4)">│   │   │   ├── store/ (auth.ts, ui.ts — Zustand)</div>
+        <div style="color:rgba(255,255,255,0.4)">│   │   │   └── lib/ (api.ts, queryClient.ts)</div>
+        <div style="color:rgba(255,255,255,0.7)">│   ├── client-portal/ (Vite + React)</div>
+        <div style="color:rgba(255,255,255,0.3)">│   │   └── src/pages/ (Upload.tsx, Download.tsx, Expired.tsx)</div>
+        <div style="color:rgba(255,255,255,0.3)">│   │   └── src/i18n/ (en.json, gu.json)</div>
+        <div style="color:rgba(255,255,255,0.7)">│   └── admin/ (Phase 3)</div>
+        <div style="color:#fab87a">├── packages/</div>
+        <div style="color:rgba(255,255,255,0.4)">│   ├── ui/ (shared Shadcn components)</div>
+        <div style="color:rgba(255,255,255,0.4)">│   └── types/ (shared TS interfaces)</div>
+        <div style="color:#fab87a">└── server/ (Hono.js API)</div>
+        <div style="color:rgba(255,255,255,0.4)">    ├── src/routes/ (clients, cases, documents, portal, invoices)</div>
+        <div style="color:rgba(255,255,255,0.4)">    ├── src/db/ (schema.ts — Drizzle, migrations/)</div>
+        <div style="color:rgba(255,255,255,0.4)">    ├── src/jobs/ (reminders.ts, notifications.ts — BullMQ)</div>
+        <div style="color:rgba(255,255,255,0.4)">    └── src/lib/ (r2.ts, razorpay.ts, tokens.ts)</div>
+      </div>
+      <div class="callout" style="margin-top:16px">Start with <code>apps/ca-portal</code> and <code>server/</code> only. Add <code>apps/client-portal</code> in week 3 once the core case and document APIs are stable. The monorepo structure means shared types prevent any API contract mismatch between frontend and backend from day one.</div>
+    </div>
+
+  </main>
+</div>
+
+<script>
+function navigate(id, el) {
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  el.classList.add('active');
+  var sec = document.getElementById('s-' + id);
+  if (sec) sec.classList.add('active');
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function toggleCard(card) {
+  var detail = card.querySelector('.module-detail');
+  var isOpen = detail.classList.contains('open');
+  detail.classList.toggle('open', !isOpen);
+  card.classList.toggle('open', !isOpen);
+}
+
+function toggleFull(header) {
+  var body = header.nextElementSibling;
+  body.classList.toggle('open');
+}
+</script>
+</body>
+</html>
